@@ -1,1 +1,1 @@
-gbfs-client==0.1.5
+gbfs-client==0.1.8

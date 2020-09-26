@@ -2,6 +2,7 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
+from typing import Dict
 
 import dotenv
 from gbfs.client import GBFSClient
@@ -30,24 +31,55 @@ class GBFSOnlineResource(object):
 
 
 class FileStorageSaver(object):
-    def __init__(self):
-        pass
+    def __init__(
+            self,
+            folder: Path = Path("gbfs"),
+            gbfs_url: str = "http://localhost:8000"
+    ):
+        self.folder = folder
+        self.gbfs_url = gbfs_url
 
     def save(
             self,
             timestamp: int,
-            status: dict,
-            snapshots: dict,
-            gbfs: dict,
+            now: int,
+            status: Dict,
+            snapshots: Dict,
+            feeds: Dict
     ):
+        (self.folder / "station_status").mkdir(parents=True, exist_ok=True)
 
-        with Path(f"gbfs/station_status/{timestamp}.json").open("w") as j:
+        with (self.folder / f"station_status/{timestamp}.json").open("w") as j:
             json.dump(status, j)
 
-        with Path("gbfs/snapshots.json").open("w") as j:
+        snapshots_p = (self.folder / "snapshots.json")
+
+        if snapshots_p.exists():
+            with snapshots_p.open("r") as j:
+                curr_snapshots = json.load(j)
+
+            prev_snapshots = curr_snapshots.get("data").get("snapshots")
+            prev_snapshots += snapshots.get("data").get("snapshots")
+
+            snapshots["data"]["snapshots"] = prev_snapshots
+
+        with snapshots_p.open("w") as j:
             json.dump(snapshots, j)
 
-        with Path("gbfs/gbfs.json").open("w") as j:
+        feeds.update(
+            station_status_snapshots=f"{self.gbfs_url}/station_status/{timestamp}.json",
+            snapshots_information=f"{self.gbfs_url}/snapshots.json",
+        )
+
+        gbfs = dict(
+            last_updated=now,
+            ttl=-1,
+            data={
+                "en": {"feeds": [dict(name=n, url=f) for n, f in feeds.items()]}
+            }
+        )
+
+        with (self.folder / "gbfs.json").open("w") as j:
             json.dump(gbfs, j)
 
 
@@ -56,12 +88,14 @@ class Snapshot(object):
             self,
             api_resource: GBFSOnlineResource,
             saver: FileStorageSaver,
+
     ):
         self.api = api_resource
         self.saver = saver
 
     def run(self):
         try:
+            # TODO this shoud be a model object
             feeds, status = self.api.snap()
         except ResourceNotAvailable:
             return
@@ -80,20 +114,7 @@ class Snapshot(object):
             data=dict(snapshots=[last_updated, ])
         )
 
-        feeds.update(
-            station_status_snapshots="http://localhost:8000/gbfs/station_status/{timestamp}.json",
-            snapshots_information="http://localhost:8000/gbfs/snapshots.json",
-        )
-
-        gbfs = dict(
-            last_updated=now,
-            ttl=-1,
-            data={
-                "en": {"feeds": [dict(name=n, url=f) for n, f in feeds.items()]}
-            }
-        )
-
-        self.saver.save(last_updated, status, snapshots, gbfs)
+        self.saver.save(last_updated, now, status, snapshots, feeds)
 
 
 if __name__ == '__main__':
@@ -101,10 +122,13 @@ if __name__ == '__main__':
     dotenv.load_dotenv()
 
     snapshot = Snapshot(
-        GBFSOnlineResource(os.environ.get(
-            "GBFS_TARGET_API", "https://barcelona.publicbikesystem.net/ube/gbfs/v1/gbfs.json"
-        )),
-        FileStorageSaver()
+        GBFSOnlineResource(
+            api_url=os.environ.get("GBFS_TARGET_API", "https://barcelona.publicbikesystem.net/ube/gbfs/v1/gbfs.json")
+        ),
+        FileStorageSaver(
+            folder=Path("gbfs"),
+            gbfs_url="http://localhost:8000/gbfs",
+        )
     )
 
     snapshot.run()

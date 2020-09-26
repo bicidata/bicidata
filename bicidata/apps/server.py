@@ -1,5 +1,6 @@
 import asyncio
 import os
+from pathlib import Path
 
 import dotenv
 
@@ -10,10 +11,13 @@ if __name__ == '__main__':
     dotenv.load_dotenv()
 
     snapshot = Snapshot(
-        GBFSOnlineResource(os.environ.get(
-            "GBFS_TARGET_API", "https://barcelona.publicbikesystem.net/ube/gbfs/v1/gbfs.json")
+        GBFSOnlineResource(
+            api_url=os.environ.get("GBFS_TARGET_API", "https://barcelona.publicbikesystem.net/ube/gbfs/v1/gbfs.json")
         ),
-        FileStorageSaver()
+        FileStorageSaver(
+            folder=Path("gbfs"),
+            gbfs_url="http://localhost:8000/gbfs",
+        )
     )
 
 

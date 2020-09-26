@@ -52,15 +52,89 @@ powerful, as data bases.
 ### Snapshots
 
 This is the first service that is being implemented, it creates snapshots of a given GBFS API
-at the current timestamp. Now, it is implemented as a 24h snapshoter,this will change soon with 
-a more elegant way to run it. For the moment: 
+at the current timestamp. 
+
+Run
 
 ```
 python -m bicidata.services.snapshot
-```  
+``` 
+
+and it will create a snapshot of a live GBFS API in you filesystem to acquire its data. If
+you want to loop it, you perfectly can do something like this from inside Python:
+
+```python
+import time
+from bicidata.services.snapshot import Snapshot, GBFSOnlineResource, FileStorageSaver
+
+num_snapshots = 60
+snapshot_sample_time = 60  # time in seconds
+
+snapshot = Snapshot(
+    GBFSOnlineResource("https://barcelona.publicbikesystem.net/ube/gbfs/v1/gbfs.json"),
+    FileStorageSaver(),
+)
+
+for _ in range(60):
+    snapshot.run()   
+    time.sleep(snapshot_sample_time)
+``` 
+
+To consume the acquired data, you will find some examples at the `scripts/` folder. To
+check for an advanced snap-shooter, consider run the `server` app.   
+
+### Archivers
+
+For the moment, there are any services to compress the data to more advanced structures 
+than JSON, but I'm playing with pandas and xarray at `scripts/create_dataset.py`, 
+so take a look if you want! 
+
+### Reporters
+
+Same here, there is a compiled dataset in the repo, so, if you want to play with it, feel
+free, at `scripts/scripts.py` you will find this to start playing with: 
+
+```python
+import pandas as pd
+import xarray as xr
+
+dataset = xr.open_dataset("data/gbfs_bcn_dump_20200925.dat")
+
+capacity = int(dataset.capacity.sum())
+print(f"'Bicing' total capacity:t status {capacity}")
+
+max_bikes_available = int(dataset.num_bikes_available.sum("station_id").max())
+print(f"'Bicing' max bikes available: {max_bikes_available}")
+
+when_max_bikes_available = pd.to_datetime(
+    dataset.times[dataset.num_bikes_available.sum("station_id").argmax()].values
+)
+print(f"When max bikes are available in UTC+0: {when_max_bikes_available}")
+```
+
+With should produce something like: 
+
+```
+'Bicing' total capacity: 13328
+'Bicing' max bikes available: 4116
+When max bikes are available in UTC+0: 2020-09-25 01:35:09
+```
+
+## Server
+
+All services are planed to run in a server instance, this server first will be implemented 
+in python, but the idea is to run it using docker-compose or kubernetes, at some point... 
+
+Now, it is implemented as a 24h snap-shooter,this will change soon with 
+a more elegant way to run it. For the moment: 
+
+```
+python -m bicidata.apps.server
+``` 
+
+You can configure the server changing the `.env.template` to `.env` and placing there your
+desired configuration. 
 
 
-
- 
 
 

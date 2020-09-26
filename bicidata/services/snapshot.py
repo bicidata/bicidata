@@ -1,7 +1,15 @@
-from datetime import datetime
-from gbfs.client import GBFSClient
 import json
+import os
+from datetime import datetime
 from pathlib import Path
+
+import dotenv
+from gbfs.client import GBFSClient
+from requests.exceptions import RequestException
+
+
+class ResourceNotAvailable(BaseException):
+    pass
 
 
 class GBFSOnlineResource(object):
@@ -13,10 +21,12 @@ class GBFSOnlineResource(object):
         assert "station_status" in self.client.feeds, "GBFS must provide a 'station_status' endpoint."
 
     def snap(self):
-        return (
-            self.client.feeds.copy(),
-            self.client.request_feed("station_status"),
-        )
+        feeds = self.client.feeds.copy()
+        try:
+            data = self.client.request_feed("station_status")
+        except RequestException:
+            raise ResourceNotAvailable
+        return feeds, data
 
 
 class FileStorageSaver(object):
@@ -31,7 +41,7 @@ class FileStorageSaver(object):
             gbfs: dict,
     ):
 
-        with Path(f"gbfs/station_information/{timestamp}.json").open("w") as j:
+        with Path(f"gbfs/station_status/{timestamp}.json").open("w") as j:
             json.dump(status, j)
 
         with Path("gbfs/snapshots.json").open("w") as j:
@@ -51,7 +61,10 @@ class Snapshot(object):
         self.saver = saver
 
     def run(self):
-        feeds, status = self.api.snap()
+        try:
+            feeds, status = self.api.snap()
+        except ResourceNotAvailable:
+            return
 
         last_updated = int(datetime.timestamp(status.get("last_updated")))
         now = int(datetime.now().timestamp())
@@ -68,7 +81,7 @@ class Snapshot(object):
         )
 
         feeds.update(
-            station_status_snapshots="http://localhost:8000/gbfs/station_information/{timestamp}.json",
+            station_status_snapshots="http://localhost:8000/gbfs/station_status/{timestamp}.json",
             snapshots_information="http://localhost:8000/gbfs/snapshots.json",
         )
 
@@ -85,39 +98,16 @@ class Snapshot(object):
 
 if __name__ == '__main__':
 
-    GBFS_TARGET_API = "https://barcelona.publicbikesystem.net/ube/gbfs/v1/gbfs.json"
-    SNAPSHOT_TIME = 60
-    NUMBER_OF_SNAPSHOTS = 60 * 24
+    dotenv.load_dotenv()
 
     snapshot = Snapshot(
-        GBFSOnlineResource(GBFS_TARGET_API),
+        GBFSOnlineResource(os.environ.get(
+            "GBFS_TARGET_API", "https://barcelona.publicbikesystem.net/ube/gbfs/v1/gbfs.json"
+        )),
         FileStorageSaver()
     )
 
     snapshot.run()
 
-    import asyncio
-
-
-    async def periodic():
-        while True:
-            snapshot.run()
-            await asyncio.sleep(SNAPSHOT_TIME)
-
-
-    def stop():
-        task.cancel()
-
-
-    loop = asyncio.get_event_loop()
-    loop.call_later(SNAPSHOT_TIME * NUMBER_OF_SNAPSHOTS, stop)
-    task = loop.create_task(periodic())
-
-    try:
-        loop.run_until_complete(task)
-    except asyncio.CancelledError:
-        pass
-    except KeyboardInterrupt:
-        print("Cntrl+C pressed.")
 
 

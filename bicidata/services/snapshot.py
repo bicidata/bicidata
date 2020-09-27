@@ -58,16 +58,16 @@ class FileStorageSaver(object):
             with snapshots_p.open("r") as j:
                 curr_snapshots = json.load(j)
 
-            prev_snapshots = curr_snapshots.get("data").get("snapshots")
-            prev_snapshots += snapshots.get("data").get("snapshots")
+            prev_snapshots = curr_snapshots.get("data").get("timestamps")
+            prev_snapshots += snapshots.get("data").get("timestamps")
 
-            snapshots["data"]["snapshots"] = prev_snapshots
+            snapshots["data"]["timestamps"] = prev_snapshots
 
         with snapshots_p.open("w") as j:
             json.dump(snapshots, j)
 
         feeds.update(
-            station_status_snapshots=f"{self.gbfs_url}/station_status/{timestamp}.json",
+            station_status_snapshots=f"{self.gbfs_url}/station_status" + "/{timestamp}.json",
             snapshots_information=f"{self.gbfs_url}/snapshots.json",
         )
 
@@ -111,7 +111,7 @@ class Snapshot(object):
         snapshots = dict(
             last_updated=now,
             ttl=-1,
-            data=dict(snapshots=[last_updated, ])
+            data=dict(timestamps=[last_updated, ])
         )
 
         self.saver.save(last_updated, now, status, snapshots, feeds)
@@ -123,11 +123,11 @@ if __name__ == '__main__':
 
     snapshot = Snapshot(
         GBFSOnlineResource(
-            api_url=os.environ.get("GBFS_TARGET_API", "https://barcelona.publicbikesystem.net/ube/gbfs/v1/gbfs.json")
+            api_url=os.environ.get("GBFS_SRC_API", "https://barcelona.publicbikesystem.net/ube/gbfs/v1/gbfs.json")
         ),
         FileStorageSaver(
-            folder=Path("gbfs"),
-            gbfs_url="http://localhost:8000/gbfs",
+            folder=Path(os.environ.get("SNAPSHOT_GBFS_FOLDER", "gbfs")),
+            gbfs_url=os.environ.get("GBFS_DST_API", "http://localhost:8000/gbfs"),
         )
     )
 

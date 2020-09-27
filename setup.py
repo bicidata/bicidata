@@ -11,13 +11,13 @@ with (here / "README.md").open("r") as rf:
 
 setup(
     name='bicidata',
-    version='0.0.2',
+    version='0.0.4',
     packages=['bicidata', 'bicidata.services'],
     url='https://github.com/bicidata/bicidata',
     license='',
     author='Ismael Benito Altamirano',
     author_email='',
-    description='bicidate is a framework to work with the General Bikeshare Feed Specification (GBFS)',
+    description='bicidata is a framework to work with the General Bikeshare Feed Specification (GBFS)',
     long_description=readme,
     long_description_content_type='text/markdown',
     install_requires=reqs,

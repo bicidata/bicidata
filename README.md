@@ -6,7 +6,7 @@
 `be-cy` or `be-thy` for a English speaker. The first one approximates better to Catalan, 
 Portuguese and Latin Spanish, the second one to Spanish and Galician.  
 
-`bicidate` is a framework to work with the [General Bikeshare Feed Specification](https://github.com/NABSA/gbfs/blob/master/gbfs.md#gbfsjson) 
+`bicidata` is a framework to work with the [General Bikeshare Feed Specification](https://github.com/NABSA/gbfs/blob/master/gbfs.md#gbfsjson) 
 (GBFS) data and aims to develop several services to collect, process and publish data from GBFS 
 feeds different front-ends, such as, social media bots, etc. 
 
@@ -101,7 +101,7 @@ import xarray as xr
 dataset = xr.open_dataset("data/gbfs_bcn_dump_20200925.dat")
 
 capacity = int(dataset.capacity.sum())
-print(f"'Bicing' total capacity:t status {capacity}")
+print(f"'Bicing' total capacity: {capacity}")
 
 max_bikes_available = int(dataset.num_bikes_available.sum("station_id").max())
 print(f"'Bicing' max bikes available: {max_bikes_available}")

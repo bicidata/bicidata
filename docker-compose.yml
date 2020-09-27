@@ -1,0 +1,20 @@
+version: "3"
+
+services:
+  server:
+    image: bicidata/server
+    build:
+     context: .
+    volumes:
+    - "gbfs:/opt/bicidata/gbfs"
+
+  gbfs-api:
+    image: python:latest
+    volumes:
+    - "gbfs:/opt/gbfs:ro"
+    entrypoint: "python -m http.server --dir /opt/gbfs"
+    ports:
+    - 8000:8000
+
+volumes:
+  gbfs:

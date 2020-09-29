@@ -4,7 +4,11 @@ from pathlib import Path
 
 import dotenv
 
-from bicidata.services.snapshot import Snapshot, GBFSOnlineResource, FileStorageSaver
+from bicidata.services.snapshot import (
+    Snapshot,
+    GBFSOnlineResource,
+    FIFOFileStorageSaver
+)
 
 if __name__ == '__main__':
 
@@ -14,9 +18,10 @@ if __name__ == '__main__':
         GBFSOnlineResource(
             api_url=os.environ.get("GBFS_SRC_API", "https://barcelona.publicbikesystem.net/ube/gbfs/v1/gbfs.json")
         ),
-        FileStorageSaver(
+        FIFOFileStorageSaver(
             folder=Path(os.environ.get("SNAPSHOT_GBFS_FOLDER", "gbfs")),
             gbfs_url=os.environ.get("GBFS_DST_API", "http://localhost:8000/gbfs"),
+            size=os.environ.get("SNAPSHOT_MAX", 60*24*2),
         )
     )
 

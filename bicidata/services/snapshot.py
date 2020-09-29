@@ -39,48 +39,81 @@ class FileStorageSaver(object):
         self.folder = folder
         self.gbfs_url = gbfs_url
 
-    def save(
-            self,
-            timestamp: int,
-            now: int,
-            status: Dict,
-            snapshots: Dict,
-            feeds: Dict
-    ):
         (self.folder / "station_status").mkdir(parents=True, exist_ok=True)
 
-        with (self.folder / f"station_status/{timestamp}.json").open("w") as j:
-            json.dump(status, j)
-
-        snapshots_p = (self.folder / "snapshots.json")
-
-        if snapshots_p.exists():
-            with snapshots_p.open("r") as j:
-                curr_snapshots = json.load(j)
-
-            prev_snapshots = curr_snapshots.get("data").get("timestamps")
-            prev_snapshots += snapshots.get("data").get("timestamps")
-
-            snapshots["data"]["timestamps"] = prev_snapshots
-
-        with snapshots_p.open("w") as j:
-            json.dump(snapshots, j)
-
-        feeds.update(
+        self._feeds_mirror_map = dict(
             station_status_snapshots=f"{self.gbfs_url}/station_status" + "/{timestamp}.json",
             snapshots_information=f"{self.gbfs_url}/snapshots.json",
         )
 
-        gbfs = dict(
-            last_updated=now,
+    def _make_gbfs(self, timestamp, feeds):
+        return dict(
+            last_updated=timestamp,
             ttl=-1,
             data={
                 "en": {"feeds": [dict(name=n, url=f) for n, f in feeds.items()]}
             }
         )
 
+    def _make_snapshots(self, snapshots_folder: Path, timestamp):
+        if snapshots_folder.exists():
+            with snapshots_folder.open("r") as j:
+                snapshots = json.load(j)
+
+            snapshots["data"]["timestamps"].append(timestamp)
+            snapshots["last_updated"] = timestamp
+            snapshots["ttl"] = -1
+
+        else:
+            snapshots = dict(
+                last_updated=timestamp,
+                ttl=-1,
+                data=dict(timestamps=[timestamp, ])
+            )
+
+        return snapshots
+
+    def save(
+            self,
+            timestamp: int,
+            now: int,
+            status: Dict,
+            feeds: Dict
+    ):
+
+        with (self.folder / f"station_status/{timestamp}.json").open("w") as j:
+            json.dump(status, j)
+
+        snapshots_p = (self.folder / "snapshots.json")
+
+        snapshots = self._make_snapshots(snapshots_p, timestamp)
+
+        with snapshots_p.open("w") as j:
+            json.dump(snapshots, j)
+
+        feeds.update(self._feeds_mirror_map)
+
+        gbfs = self._make_gbfs(now, feeds)
+
         with (self.folder / "gbfs.json").open("w") as j:
             json.dump(gbfs, j)
+
+
+class FIFOFileStorageSaver(FileStorageSaver):
+
+    def __init__(self, *args, **kwargs):
+        self._fifo_size = kwargs.pop("size", 3)
+        super(FIFOFileStorageSaver, self).__init__(*args, **kwargs)
+
+    def _make_snapshots(self, snapshots_folder: Path, timestamp):
+        # Hook a FIFO before returning the snapshots object:
+        snapshots = super(FIFOFileStorageSaver, self)._make_snapshots(snapshots_folder, timestamp)
+
+        if len(snapshots.get("data").get("timestamps")) >= self._fifo_size:
+            pop_timestamp, *snapshots["data"]["timestamps"] = snapshots["data"]["timestamps"]
+            os.remove(self.folder / f"station_status/{pop_timestamp}.json")
+
+        return snapshots
 
 
 class Snapshot(object):
@@ -108,13 +141,7 @@ class Snapshot(object):
             ttl=-1,
         )
 
-        snapshots = dict(
-            last_updated=now,
-            ttl=-1,
-            data=dict(timestamps=[last_updated, ])
-        )
-
-        self.saver.save(last_updated, now, status, snapshots, feeds)
+        self.saver.save(last_updated, now, status, feeds)
 
 
 if __name__ == '__main__':

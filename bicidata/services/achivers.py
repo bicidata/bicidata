@@ -4,7 +4,6 @@ from gbfs.client import GBFSClient
 import xarray as xr
 from tqdm import tqdm
 
-
 client = GBFSClient("http://35.241.203.225/gbfs.json")
 snapshots = client.request_feed("snapshots_information")
 

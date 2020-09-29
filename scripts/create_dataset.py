@@ -1,13 +1,14 @@
 from datetime import datetime
 import pandas as pd
 from gbfs.client import GBFSClient
-from pathlib import Path
 import xarray as xr
 from tqdm import tqdm
 
-timestamps = [int(p.stem) for p in sorted(Path("gbfs/station_information").iterdir())]
 
-client = GBFSClient("http://localhost:8000/gbfs/gbfs.json")
+client = GBFSClient("http://35.187.31.174/gbfs.json")
+snapshots = client.request_feed("snapshots_information")
+
+timestamps = sorted(int(t) for t in snapshots.get("data").get("timestamps"))
 
 status_list = []
 
@@ -49,4 +50,4 @@ dataset = xr.merge([dataset, info.to_xarray()])
 comp = dict(zlib=True, complevel=5)
 encoding = {var: comp for var in dataset.data_vars}
 
-dataset.to_netcdf("data/gbfs_bcn_dump_20200925.dat", encoding=encoding, engine="h5netcdf")
+dataset.to_netcdf("data/gbfs_bcn_dump.dat", encoding=encoding, engine="h5netcdf")

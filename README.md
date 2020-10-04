@@ -65,13 +65,14 @@ you want to loop it, you perfectly can do something like this from inside Python
 
 ```python
 import time
-from bicidata.services.snapshot import Snapshot, GBFSOnlineResource, FileStorageSaver
+from bicidata.services.snapshot import Snapshot,  FileStorageSaver
+from bicidata.common import GBFSResource
 
 num_snapshots = 60
 snapshot_sample_time = 60  # time in seconds
 
 snapshot = Snapshot(
-    GBFSOnlineResource("https://barcelona.publicbikesystem.net/ube/gbfs/v1/gbfs.json"),
+    GBFSResource("https://barcelona.publicbikesystem.net/ube/gbfs/v1/gbfs.json"),
     FileStorageSaver(),
 )
 

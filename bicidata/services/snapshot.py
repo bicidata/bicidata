@@ -5,29 +5,8 @@ from pathlib import Path
 from typing import Dict
 
 import dotenv
-from gbfs.client import GBFSClient
-from requests.exceptions import RequestException
 
-
-class ResourceNotAvailable(BaseException):
-    pass
-
-
-class GBFSOnlineResource(object):
-    def __init__(
-            self,
-            api_url: str,
-    ):
-        self.client = GBFSClient(api_url)
-        assert "station_status" in self.client.feeds, "GBFS must provide a 'station_status' endpoint."
-
-    def snap(self):
-        feeds = self.client.feeds.copy()
-        try:
-            data = self.client.request_feed("station_status")
-        except RequestException:
-            raise ResourceNotAvailable
-        return feeds, data
+from bicidata.common import ResourceNotAvailable, GBFSResource
 
 
 class FileStorageSaver(object):
@@ -119,7 +98,7 @@ class FIFOFileStorageSaver(FileStorageSaver):
 class Snapshot(object):
     def __init__(
             self,
-            api_resource: GBFSOnlineResource,
+            api_resource: GBFSResource,
             saver: FileStorageSaver,
 
     ):
@@ -129,10 +108,11 @@ class Snapshot(object):
     def run(self):
         try:
             # TODO this shoud be a model object
-            feeds, status = self.api.snap()
+            status = self.api.request_feed("station_status")
         except ResourceNotAvailable:
             return
 
+        feeds = self.api.feeds.copy()
         last_updated = int(datetime.timestamp(status.get("last_updated")))
         now = int(datetime.utcnow().timestamp())
 
@@ -149,8 +129,8 @@ if __name__ == '__main__':
     dotenv.load_dotenv()
 
     snapshot = Snapshot(
-        GBFSOnlineResource(
-            api_url=os.environ.get("GBFS_SRC_API", "https://barcelona.publicbikesystem.net/ube/gbfs/v1/gbfs.json")
+        GBFSResource(
+            url=os.environ.get("GBFS_SRC_API", "https://barcelona.publicbikesystem.net/ube/gbfs/v1/gbfs.json")
         ),
         FileStorageSaver(
             folder=Path(os.environ.get("SNAPSHOT_GBFS_FOLDER", "gbfs")),

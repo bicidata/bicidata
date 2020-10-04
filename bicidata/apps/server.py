@@ -6,17 +6,17 @@ import dotenv
 
 from bicidata.services.snapshot import (
     Snapshot,
-    GBFSOnlineResource,
     FIFOFileStorageSaver
 )
+from bicidata.common import GBFSResource
 
 if __name__ == '__main__':
 
     dotenv.load_dotenv()
 
     snapshot = Snapshot(
-        GBFSOnlineResource(
-            api_url=os.environ.get("GBFS_SRC_API", "https://barcelona.publicbikesystem.net/ube/gbfs/v1/gbfs.json")
+        GBFSResource(
+            url=os.environ.get("GBFS_SRC_API", "https://barcelona.publicbikesystem.net/ube/gbfs/v1/gbfs.json")
         ),
         FIFOFileStorageSaver(
             folder=Path(os.environ.get("SNAPSHOT_GBFS_FOLDER", "gbfs")),

@@ -1,6 +1,9 @@
-from datetime import datetime, timedelta
+import os
+from pathlib import Path
+from datetime import datetime, timedelta, date
 from typing import Dict, Any, Union
 
+import dotenv
 import pandas as pd
 import xarray as xr
 from tqdm import tqdm
@@ -42,16 +45,26 @@ def is_yesterday(
 
 
 class DatasetSaver(object):
-    @staticmethod
+    def __init__(
+            self,
+            folder: Path = Path("data"),
+
+    ):
+        self.folder = folder
+
     def save(
+            self,
             dataset: xr.Dataset,
+            name: Union[str, Path] = "gbfs_dump.dat",
     ):
         comp = dict(zlib=True, complevel=5)
         encoding = {var: comp for var in dataset.data_vars}
 
-        yesterday = (datetime.utcnow().date() - timedelta(1)).strftime("%Y%m%d")
-
-        dataset.to_netcdf(f"data/gbfs_bcn_dump_{yesterday}.dat", encoding=encoding, engine="h5netcdf")
+        dataset.to_netcdf(
+            self.folder / name,
+            encoding=encoding,
+            engine="h5netcdf"
+        )
 
 
 class Archiver(object):
@@ -100,8 +113,12 @@ class Archiver(object):
 
 if __name__ == '__main__':
 
+    dotenv.load_dotenv()
+
     archiver = Archiver(
         GBFSResourceSnapshots("http://35.241.203.225/gbfs.json"),
-        DatasetSaver(),
+        DatasetSaver(
+            folder=Path(os.environ.get("SNAPSHOT_GBFS_FOLDER", "data")),
+        ),
     )
     archiver.run()

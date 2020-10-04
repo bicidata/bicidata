@@ -134,7 +134,7 @@ class Snapshot(object):
             return
 
         last_updated = int(datetime.timestamp(status.get("last_updated")))
-        now = int(datetime.now().timestamp())
+        now = int(datetime.utcnow().timestamp())
 
         status.update(
             last_updated=last_updated,

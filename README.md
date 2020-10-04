@@ -86,7 +86,7 @@ check for an advanced snap-shooter, consider run the `server` app.
 ### Archivers
 
 For the moment, there are any services to compress the data to more advanced structures 
-than JSON, but I'm playing with pandas and xarray at `scripts/create_dataset.py`, 
+than JSON, but I'm playing with pandas and xarray at `bicidata/services/archivers.py`, 
 so take a look if you want! 
 
 ### Reporters

@@ -21,7 +21,7 @@ if __name__ == '__main__':
         FIFOFileStorageSaver(
             folder=Path(os.environ.get("SNAPSHOT_GBFS_FOLDER", "gbfs")),
             gbfs_url=os.environ.get("GBFS_DST_API", "http://localhost:8000/gbfs"),
-            size=os.environ.get("SNAPSHOT_MAX", 60*24*2),
+            size=int(os.environ.get("SNAPSHOT_MAX", 60*24*2)),
         )
     )
 

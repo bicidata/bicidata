@@ -5,3 +5,4 @@ netcdf4
 h5netcdf
 requests
 python-dotenv
+tqdm

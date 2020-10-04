@@ -11,7 +11,7 @@ bike_types = ["num_bikes_available_mechanical", "num_bikes_available_ebike"]
 
 
 def station_status_to_dataframe(
-        status: StationDict
+        status: StationDict  # TODO implement better model types or dataclasses
 ) -> pd.DataFrame:
     status = pd.DataFrame.from_dict(status)
     status[bike_types] = status.num_bikes_available_types.apply(pd.Series)
@@ -24,6 +24,7 @@ def station_status_to_dataframe(
     return status
 
 
+# TODO Generalize for any day and create a partial for yesterday
 def is_yesterday(
         dt: Union[float, int, datetime]
 ) -> bool:
@@ -39,9 +40,10 @@ def is_yesterday(
     return yesterday_dt < dt < today_dt
 
 
-if __name__ == '__main__':
+def make_dataset(
+        client: GBFSClient,
 
-    client = GBFSClient("http://35.241.203.225/gbfs.json")
+) -> xr.Dataset:
     snapshots = client.request_feed("snapshots_information")
 
     timestamps = (int(t) for t in snapshots.get("data").get("timestamps"))
@@ -71,11 +73,23 @@ if __name__ == '__main__':
     info["groups"] = info.groups.apply(lambda x: x[0])
     info = info.drop("rental_methods", axis=1)
 
-    dataset = xr.merge([dataset, info.to_xarray()])
+    return xr.merge([dataset, info.to_xarray()])
 
+
+def save_dataset(
+        dataset: xr.Dataset,
+):
     comp = dict(zlib=True, complevel=5)
     encoding = {var: comp for var in dataset.data_vars}
 
     yesterday = (datetime.utcnow().date() - timedelta(1)).strftime("%Y%m%d")
 
     dataset.to_netcdf(f"data/gbfs_bcn_dump_{yesterday}.dat", encoding=encoding, engine="h5netcdf")
+
+
+if __name__ == '__main__':
+
+    # TODO create a service class, reuse GBFSOnlineResource class
+    client = GBFSClient("http://35.241.203.225/gbfs.json")
+    dataset = make_dataset(client)
+    save_dataset(dataset)

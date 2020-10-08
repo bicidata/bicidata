@@ -90,7 +90,9 @@ class FIFOFileStorageSaver(FileStorageSaver):
 
         if len(snapshots.get("data").get("timestamps")) >= self._fifo_size:
             pop_timestamp, *snapshots["data"]["timestamps"] = snapshots["data"]["timestamps"]
-            os.remove(self.folder / f"station_status/{pop_timestamp}.json")
+            pop_path = self.folder / f"station_status/{pop_timestamp}.json"
+            if pop_path.exists():
+                os.remove(pop_path)
 
         return snapshots
 

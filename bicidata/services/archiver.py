@@ -29,7 +29,7 @@ def station_status_to_dataframe(
     return status
 
 
-def station_information_to_dataframe(self, data):
+def station_information_to_dataframe(data):
     info = pd.DataFrame.from_dict(data)
     info = info.set_index("station_id")
     info = info.sort_index(axis=1)

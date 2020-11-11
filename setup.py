@@ -11,7 +11,7 @@ with (here / "README.md").open("r") as rf:
 
 setup(
     name='bicidata',
-    version='0.0.5',
+    version='0.1.0',
     packages=['bicidata', 'bicidata.services'],
     url='https://github.com/bicidata/bicidata',
     license='',

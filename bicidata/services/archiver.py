@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from datetime import datetime, timedelta, date
-from typing import Dict, Any, Union, List
+from typing import Dict, Any, Union, List, Optional
 from functools import partial
 
 import dotenv
@@ -9,7 +9,10 @@ import pandas as pd
 import xarray as xr
 from tqdm import tqdm
 
-from bicidata.common import GBFSResourceSnapshots
+from bicidata.common import (
+    GBFSResourceSnapshots,
+    GBFSResourceSnapshotsDate,
+)
 
 StationDict = Dict[str, Any]
 bike_types = ["num_bikes_available_mechanical", "num_bikes_available_ebike"]
@@ -29,7 +32,7 @@ def station_status_to_dataframe(
     return status
 
 
-def station_information_to_dataframe(self, data):
+def station_information_to_dataframe(data):
     info = pd.DataFrame.from_dict(data)
     info = info.set_index("station_id")
     info = info.sort_index(axis=1)
@@ -38,23 +41,6 @@ def station_information_to_dataframe(self, data):
     info["groups"] = info.groups.apply(lambda x: x[0])
     info = info.drop("rental_methods", axis=1)
     return info
-
-
-def timestamp_is_date(
-        dt: Union[float, int, datetime],
-        day: Union[datetime, date]
-) -> bool:
-    if isinstance(dt, (float, int)):
-        dt = datetime.utcfromtimestamp(dt)
-    if isinstance(day, datetime):
-        day = day.date()
-
-    next_day = day + timedelta(1)
-
-    day_dt = datetime(*day.timetuple()[:6])
-    next_day_dt = datetime(*next_day.timetuple()[:6])
-
-    return day_dt < dt < next_day_dt
 
 
 class DatasetSaver(object):
@@ -90,23 +76,18 @@ class Archiver(object):
         self.saver = saver
 
     def _get_station_information(self) -> pd.DataFrame:
-        data = self.api.request_feed("station_information").get("data").get("stations")
-        return station_information_to_dataframe(data)
+        station_data = self.api.request_feed("station_information").get("data").get("stations")
+        return station_information_to_dataframe(station_data)
 
     def _get_station_status_snapshot(self, timestamp: int) -> pd.DataFrame:
-        data = self.api.request_feed("station_status_snapshots", timestamp=timestamp).get("data").get("stations")
-        return station_status_to_dataframe(data)
-
-    def _get_snapshots_information(self) -> List[int]:
-        snapshots = self.api.request_feed("snapshots_information")
-        timestamps = sorted(int(t) for t in snapshots.get("data").get("timestamps"))
-
-        return timestamps
+        station_data = self.api.request_feed("station_status_snapshots", timestamp=timestamp).get("data").get("stations")
+        return station_status_to_dataframe(station_data)
 
     def _make_dataset(self) -> xr.Dataset:
-        timestamps = self._get_snapshots_information()
+        timestamps, snapshots = self.api.request_snapshots()
 
-        status_list = list(self._get_station_status_snapshot(t) for t in tqdm(timestamps))
+        # TODO move this recursive queries to GBFSResourceSnapshots
+        status_list = list(station_status_to_dataframe(t) for t in tqdm(snapshots))
         info = self._get_station_information()
 
         dataset_status: xr.Dataset = xr.concat(
@@ -125,20 +106,15 @@ class Archiver(object):
         self.saver.save(self._make_dataset())
 
 
-class ArchiverYesterday(Archiver):
-    def _get_snapshots_information(self) -> List[int]:
-        timestamps = super(ArchiverYesterday, self)._get_snapshots_information()
-        is_yesterday = partial(timestamp_is_date, day=datetime.utcnow().date() - timedelta(1))
-        timestamps = sorted(filter(is_yesterday, timestamps))
-        return timestamps
-
-
 if __name__ == '__main__':
 
     dotenv.load_dotenv()
 
-    archiver = ArchiverYesterday(
-        GBFSResourceSnapshots("http://35.241.203.225/gbfs.json"),
+    archiver = Archiver(
+        GBFSResourceSnapshotsDate(
+            "http://35.241.203.225/gbfs.json",
+            date=datetime.utcnow().date() - timedelta(1),
+        ),
         DatasetSaver(
             folder=Path(os.environ.get("SNAPSHOT_GBFS_FOLDER", "data")),
         ),

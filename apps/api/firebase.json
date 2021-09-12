@@ -7,8 +7,8 @@
     "public": "public",
     "rewrites": [
       {
-        "source": "/helloWorld",
-        "function": "helloWorld"
+        "source": "/gbfs",
+        "function": "gbfs"
       }
     ],
     "ignore": [

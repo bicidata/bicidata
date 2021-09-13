@@ -54,12 +54,15 @@ exports.gbfsSnapshot = functions
 
          let timestamp = json_gbfs["last_updated"];
          let date = new Date(timestamp * 1000);
+         let year = date.getFullYear().toString();
+         let month = (date.getMonth() + 1).toString().padStart(2, "0");
+         let day = date.getDate().toString().padStart(2, "0");
 
          json_gbfs["ttl"] = -1;
 
          // Push the new snapshot into Firestore using the Firebase Admin SDK.
          const writeResult = await admin.firestore()
-             .collection(`snapshots_${date.getFullYear()}-${date.getMonth() + 1}-${date.getDay()}`)
+             .collection(`snapshots_${year}-${month}-${day}`)
              .doc(timestamp.toString())
              .set(json_gbfs);
 

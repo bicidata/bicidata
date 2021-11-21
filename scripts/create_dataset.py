@@ -76,19 +76,6 @@ dataset_status: xr.Dataset = xr.concat(
 
 dataset = xr.merge([dataset_status, station_information.to_xarray()])
 
-bikes_per_post_code = dataset.groupby("post_code").sum().num_bikes_available.to_pandas()
-bikes_barcelona = bikes_per_post_code.iloc[:, 700]
 
-
-barcelona = gpd.read_file("../data/snapshots_firebase/barcelona_postcodes.geojson")
-barcelona = barcelona.sort_values("COD_POSTAL")
-
-barcelona["bikes"] = [
-    bikes_barcelona[postcode] if postcode in bikes_barcelona else np.nan
-    for postcode in barcelona["COD_POSTAL"]
-]
-barcelona = barcelona.dropna()
-ax = barcelona.plot("bikes", legend=True)
-ax.axis("off")
 
 

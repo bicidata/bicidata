@@ -39,7 +39,29 @@ exports.gbfs = functions
     );
 
 // A function to serve the GBFS snapshots:
-// TODO
+exports.gbfsSnapshotInformation = functions
+    .https
+    .onRequest(async (request, response) => {
+        functions.logger.info("Hello.", {structuredData: true});
+        let date = "2021-09-13";
+        let snapshot_id = `snapshots_${date}`;
+
+        let list_snapshots = (await admin
+            .firestore()
+            .collection(snapshot_id)
+            .listDocuments()).map(function (doc) {
+                return doc.path;
+        })
+
+
+        let obj = {
+            last_updated: Math.ceil(new Date().getTime()/1000),
+            ttl: -1,
+            data: {timestamps: list_snapshots}
+        };
+        response.json(obj);
+      }
+    );
 
 
 // A function to capture the GBFS snapshots:

@@ -9,6 +9,10 @@
       {
         "source": "/gbfs",
         "function": "gbfs"
+      },
+      {
+        "source": "/snapshots_information",
+        "function": "gbfsSnapshotInformation"
       }
     ],
     "ignore": [

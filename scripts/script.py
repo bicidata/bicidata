@@ -2,7 +2,7 @@ import pandas as pd
 import xarray as xr
 import matplotlib.pyplot as plt
 
-dataset = xr.open_dataset("data/gbfs_bcn_dump_20200925.dat")
+dataset = xr.open_dataset("gbfs/gbfs_dump.dat")
 
 capacity = int(dataset.capacity.sum())
 print(f"'Bicing' total capacity: {capacity}")
@@ -78,7 +78,8 @@ df.plot.line(ax=ax)
 df: pd.DataFrame = (
     dataset
     .where((dataset.altitude >= altitude_desc.loc["25%"].values) & (dataset.altitude < altitude_desc.loc["50%"].values))
-    .num_bikes_available.dropna("station_id", how="all")
+    .num_bikes_available
+    .dropna("station_id", how="all")
     .sum("station_id")
     .to_dataframe(name="Bicis disponibles 9-25 m")
 )
@@ -87,7 +88,8 @@ df.plot.line(ax=ax)
 df: pd.DataFrame = (
     dataset
     .where((dataset.altitude >= altitude_desc.loc["50%"].values) & (dataset.altitude < altitude_desc.loc["75%"].values))
-    .num_bikes_available.dropna("station_id", how="all")
+    .num_bikes_available
+    .dropna("station_id", how="all")
     .sum("station_id")
     .to_dataframe(name="Bicis disponibles 25-52 m")
 )

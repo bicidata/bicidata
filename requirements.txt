@@ -6,3 +6,4 @@ h5netcdf
 requests
 python-dotenv
 tqdm
+tweepy
